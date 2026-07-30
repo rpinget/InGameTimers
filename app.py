@@ -52,8 +52,8 @@ st.set_page_config(page_title="LoL CD Tracker", layout="wide")
 
 st.sidebar.title("⚙️ Configuración")
 api_key = st.sidebar.text_input("Riot API Key (RGAPI-...)", type="password")
-riot_id = st.sidebar.text_input("Riot ID (ej: MiNombre)", "MiNombre")
-tagline = st.sidebar.text_input("Tagline (ej: LAS)", "LAS")
+riot_id = st.sidebar.text_input("Riot ID (ej: MiNombre)", "PipiRomagnoli")
+tagline = st.sidebar.text_input("Tagline (ej: LAS)", "ALDOG")
 
 selected_region = st.sidebar.selectbox("Región de Cuenta", list(REGION_MAP.keys()))
 region = REGION_MAP[selected_region]
