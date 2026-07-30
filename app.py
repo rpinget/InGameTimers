@@ -26,7 +26,17 @@ PLATFORM_MAP = {
     "NA (Norteamérica)": "na1",
     "BR (Brasil)": "br1",
     "EUW (Europa Oeste)": "euw1",
-    "EUNE (Europa Nórdica y Este)": "eun1"
+    "EUNE (Europa Nórdica y Este)": "eun1",
+    "TR (Turquía)": "tr1",
+    "RU (Rusia)": "ru",
+    "OCE (Oceanía)": "oc1",
+    "JP (Japón)": "jp1",
+    "KR (Corea)": "kr",
+    "PH (Filipinas)": "ph2",
+    "SG (Singapur/Malasia/Indonesia)": "sg2",
+    "TH (Tailandia)": "th2",
+    "TW (Taiwán/Hong Kong/Macao)": "tw2",
+    "VN (Vietnam)": "vn2"
 }
 
 def calculate_cd(base_cd, has_cosmic):
