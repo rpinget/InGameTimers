@@ -12,6 +12,23 @@ SPELL_BASE_CDS = {
 }
 COSMIC_INSIGHT_ID = 8347
 
+# --- MAPEO DE REGIONES Y SERVIDORES PARA LA INTERFAZ ---
+# Clave: Lo que ve el usuario | Valor: Lo que entiende la API
+REGION_MAP = {
+    "Américas": "americas",
+    "Europa": "europe",
+    "Asia": "asia"
+}
+
+PLATFORM_MAP = {
+    "LAS (Latinoamérica Sur)": "la2",
+    "LAN (Latinoamérica Norte)": "la1",
+    "NA (Norteamérica)": "na1",
+    "BR (Brasil)": "br1",
+    "EUW (Europa Oeste)": "euw1",
+    "EUNE (Europa Nórdica y Este)": "eun1"
+}
+
 def calculate_cd(base_cd, has_cosmic):
     return math.floor(base_cd * (100 / (100 + (18 if has_cosmic else 0))))
 
@@ -22,8 +39,13 @@ st.sidebar.title("⚙️ Configuración")
 api_key = st.sidebar.text_input("Riot API Key (RGAPI-...)", type="password")
 riot_id = st.sidebar.text_input("Riot ID (ej: MiNombre)", "MiNombre")
 tagline = st.sidebar.text_input("Tagline (ej: LAS)", "LAS")
-region = st.sidebar.selectbox("Región de Cuenta", ["americas", "europe", "asia"])
-platform = st.sidebar.selectbox("Servidor de Juego", ["la2", "la1", "na1", "euw1"])
+
+# Aquí usamos el mapeo. El usuario elige la clave ("LAS..."), la variable guarda el valor ("la2")
+selected_region_label = st.sidebar.selectbox("Región de Cuenta (Para buscar el Riot ID)", list(REGION_MAP.keys()))
+region = REGION_MAP[selected_region_label]
+
+selected_platform_label = st.sidebar.selectbox("Servidor de Juego (Para buscar la partida)", list(PLATFORM_MAP.keys()))
+platform = PLATFORM_MAP[selected_platform_label]
 
 st.title("⏱️ Tracker de Summoners - Minuto 0")
 
@@ -33,7 +55,7 @@ if st.button("Buscar Partida en Vivo"):
     else:
         headers = {"X-Riot-Token": api_key}
         
-        # 1. Obtener PUUID
+        # 1. Obtener PUUID (Usa la variable 'region', que para "Américas" vale "americas")
         acc_url = f"https://{region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{riot_id}/{tagline}"
         acc_res = requests.get(acc_url, headers=headers)
         
@@ -42,7 +64,7 @@ if st.button("Buscar Partida en Vivo"):
         else:
             puuid = acc_res.json()['puuid']
             
-            # 2. Buscar partida
+            # 2. Buscar partida (Usa la variable 'platform', que para "LAS" vale "la2")
             spec_url = f"https://{platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/{puuid}"
             spec_res = requests.get(spec_url, headers=headers)
             
