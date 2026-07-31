@@ -30,21 +30,24 @@ PLATFORM_MAP = {
 def calculate_cd(base_cd, has_cosmic):
     return math.floor(base_cd * (100 / (100 + (18 if has_cosmic else 0))))
 
-# --- FUNCIONES CON CACHÉ PARA PROTEGER LA API ---
+# --- FUNCIONES CON CACHÉ (CORREGIDAS) ---
+# Ahora devolvemos diccionarios simples que Streamlit puede guardar sin fallos.
 
-# Guarda el PUUID en memoria por 1 hora (3600 segundos)
 @st.cache_data(ttl=3600, show_spinner=False)
-def get_puuid(api_key, region, riot_id, tagline):
+def get_puuid_data(api_key, region, riot_id, tagline):
     url = f"https://{region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{riot_id}/{tagline}"
-    headers = {"X-Riot-Token": api_key}
-    return requests.get(url, headers=headers)
+    res = requests.get(url, headers={"X-Riot-Token": api_key})
+    if res.status_code == 200:
+        return {"status": 200, "puuid": res.json()['puuid']}
+    return {"status": res.status_code}
 
-# Guarda los datos de la partida por 30 segundos para evitar el spam de clics
-@st.cache_data(ttl=30, show_spinner=False)
-def get_live_match(api_key, platform, puuid):
+@st.cache_data(ttl=15, show_spinner=False)
+def get_live_match_data(api_key, platform, puuid):
     url = f"https://{platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/{puuid}"
-    headers = {"X-Riot-Token": api_key}
-    return requests.get(url, headers=headers)
+    res = requests.get(url, headers={"X-Riot-Token": api_key})
+    if res.status_code == 200:
+        return {"status": 200, "data": res.json()}
+    return {"status": res.status_code}
 
 
 # --- INTERFAZ ---
@@ -52,6 +55,7 @@ st.set_page_config(page_title="LoL CD Tracker", layout="wide")
 
 st.sidebar.title("⚙️ Configuración")
 api_key = st.sidebar.text_input("Riot API Key (RGAPI-...)", type="password")
+
 riot_id = st.sidebar.text_input("Riot ID (ej: MiNombre)", "PipiRomagnoli")
 tagline = st.sidebar.text_input("Tagline (ej: LAS)", "ALDOG")
 
@@ -68,27 +72,26 @@ if st.button("Buscar Partida en Vivo"):
         st.error("Por favor, ingresa tu API Key en la barra lateral.")
     else:
         with st.spinner("Conectando con los servidores de Riot..."):
-            # 1. Obtener PUUID (Cacheado)
-            acc_res = get_puuid(api_key, region, riot_id, tagline)
             
-            if acc_res.status_code != 200:
-                st.error(f"Error en la cuenta. ¿Caducó la API Key? Código: {acc_res.status_code}")
-                # Borra el caché de esta función si hubo error para que permita intentar de nuevo al cambiar la key
-                get_puuid.clear() 
+            # 1. Obtener PUUID 
+            acc_result = get_puuid_data(api_key, region, riot_id, tagline)
+            
+            if acc_result["status"] != 200:
+                st.error(f"Error en la cuenta. ¿Caducó la API Key? Código: {acc_result['status']}")
             else:
-                puuid = acc_res.json()['puuid']
+                puuid = acc_result["puuid"]
                 
-                # 2. Buscar partida (Cacheado por 30s)
-                spec_res = get_live_match(api_key, platform, puuid)
+                # 2. Buscar partida (El caché protegerá tu límite si aprietas rápido)
+                match_result = get_live_match_data(api_key, platform, puuid)
                 
-                if spec_res.status_code == 404:
-                    st.warning("No estás en partida en este momento.")
-                    get_live_match.clear() # Limpia el caché si no hay partida para que busque instantáneo cuando empiece
-                elif spec_res.status_code != 200:
-                    st.error(f"Error buscando la partida. Código: {spec_res.status_code}")
-                    get_live_match.clear()
+                if match_result["status"] == 404:
+                    st.warning("No estás en partida. (El botón está protegido por 15 segundos para no agotar tu API Key).")
+                elif match_result["status"] == 429:
+                    st.error("Límite de Riot excedido. Espera exactamente 2 minutos y vuelve a intentarlo.")
+                elif match_result["status"] != 200:
+                    st.error(f"Error buscando la partida. Código: {match_result['status']}")
                 else:
-                    match_data = spec_res.json()
+                    match_data = match_result["data"]
                     players = []
                     
                     # 3. Procesar jugadores
